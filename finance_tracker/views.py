@@ -1,5 +1,9 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import Transaction
+from .forms import TransactionForm
+
+def root_redirect(request):
+    return redirect('login')
 
 def transaction_list(request):
     transactions = Transaction.objects.filter(user=request.user).order_by('date')  # 昇順に並べ替え
@@ -28,3 +32,16 @@ def transaction_list(request):
     return render(request, 'finance_tracker/transaction_list.html', {
         'transactions': transaction_with_balance
     })
+
+def add_transaction(request):
+    if request.method == 'POST':
+        form = TransactionForm(request.POST)
+        if form.is_valid():
+            transaction = form.save(commit=False)
+            transaction.user = request.user  # ユーザーを設定
+            transaction.save()
+            return redirect('transaction_list')
+    else:
+        form = TransactionForm()
+
+    return render(request, 'finance_tracker/add_transaction.html', {'form': form})
