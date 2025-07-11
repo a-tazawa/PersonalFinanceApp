@@ -1,10 +1,14 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Transaction
 from .forms import TransactionForm
+from .models import Category
+from .forms import CategoryForm
 
 def root_redirect(request):
     return redirect('login')
 
+@login_required
 def transaction_list(request):
     transactions = Transaction.objects.filter(user=request.user).order_by('date')
     balance = 0
@@ -34,6 +38,7 @@ def transaction_list(request):
         'transactions': transaction_with_balance
     })
 
+@login_required
 def add_transaction(request):
     if request.method == 'POST':
         form = TransactionForm(request.POST)
@@ -47,8 +52,9 @@ def add_transaction(request):
 
     return render(request, 'finance_tracker/add_transaction.html', {'form': form})
 
+@login_required
 def edit_transaction(request, pk):
-    transaction = get_object_or_404(Transaction, pk=pk)
+    transaction = get_object_or_404(Transaction, pk=pk, user=request.user)
     if request.method == 'POST':
         form = TransactionForm(request.POST, instance=transaction)
         if form.is_valid():
@@ -60,10 +66,49 @@ def edit_transaction(request, pk):
 
 from django.shortcuts import render, redirect, get_object_or_404
 
+@login_required
 def delete_transaction(request, pk):
-    transaction = get_object_or_404(Transaction, pk=pk)
+    transaction = get_object_or_404(Transaction, pk=pk, user=request.user)
     if request.method == 'POST':
         transaction.delete()
         return redirect('transaction_list')
     return render(request, 'finance_tracker/delete_transaction_confirm.html', {'transaction': transaction})
 
+
+@login_required
+def category_list(request):
+    categories = Category.objects.filter(user=request.user).order_by('name')
+    return render(request, 'finance_tracker/category_list.html', {'categories': categories})
+
+@login_required
+def add_category(request):
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save(commit=False)
+            category.user = request.user
+            category.save()
+            return redirect('category_list')
+    else:
+        form = CategoryForm()
+    return render(request, 'finance_tracker/add_category.html', {'form': form})
+
+@login_required
+def edit_category(request, pk):
+    category = get_object_or_404(Category, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            return redirect('category_list')
+    else:
+        form = CategoryForm(instance=category)
+    return render(request, 'finance_tracker/add_category.html', {'form': form})
+
+@login_required
+def delete_category(request, pk):
+    category = get_object_or_404(Category, pk=pk, user=request.user)
+    if request.method == 'POST':
+        category.delete()
+        return redirect('category_list')
+    return render(request, 'finance_tracker/delete_category_confirm.html', {'category': category})
